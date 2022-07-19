@@ -8,6 +8,7 @@ from pathlib import Path
 from console import green, green_bold, cyan, red, yellow
 from starknet_py.contract import Contract
 from starknet_py.net import AccountClient, KeyPair
+from starknet_py.net.gateway_client import GatewayClient
 from starkware.crypto.signature.signature import sign
 from starknet_py.net.client import Client, InvokeFunction
 from starknet_py.net.models import StarknetChainId
@@ -131,12 +132,13 @@ async def compile_deploy(client, contract="", args=[], salt=0):
     deployment_result = await Contract.deploy(client=client, compiled_contract=Path(compiled).read_text(), constructor_args=args, salt=salt)
     os.system("rm {}".format(compiled))
 
+    yellow.print(deployment_result)
     await client.wait_for_tx(deployment_result.hash)
     res = await client.get_transaction(deployment_result.hash)
+    yellow.print(res)
+    contract_cache(client.net, contract, res.contract_address)
 
-    contract_cache(client.net, contract, res.transaction.contract_address)
-
-    return deployment_result.deployed_contract, res.transaction.contract_address
+    return deployment_result.deployed_contract, res.contract_address
 
 async def fund_account(toAddr):
     acc_client, acc_addr = get_account_client()
@@ -210,21 +212,23 @@ def get_account_client():
 
     if args.testnet:
         addr = data['TESTNET_ACCOUNT']['ADDRESS']
+        client = GatewayClient(net="testnet",
+            chain=StarknetChainId.TESTNET)
         acc_client = AccountClient(
             address=addr,
             key_pair=KeyPair(data['TESTNET_ACCOUNT']['PRIVATE'], data['TESTNET_ACCOUNT']['PUBLIC']),
-            net="testnet",
-            chain=StarknetChainId.TESTNET)
+            client = client)
         
         return acc_client, addr
 
     else:
         addr = data['DEVNET_ACCOUNT']['ADDRESS']
+        client = GatewayClient(net=data['DEVNET_URL'],
+            chain=StarknetChainId.TESTNET)
         acc_client = AccountClient(
             address=addr,
             key_pair=KeyPair(data['DEVNET_ACCOUNT']['PRIVATE'], data['DEVNET_ACCOUNT']['PUBLIC']),
-            net=data['DEVNET_URL'],
-            chain=StarknetChainId.TESTNET)
+            client = client)
         
         return acc_client, addr
 
