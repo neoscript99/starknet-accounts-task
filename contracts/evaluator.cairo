@@ -273,7 +273,7 @@ func validate_signature_1{
     assert_not_zero(caller)
 
     let (tx_info) = get_tx_info()
-    assert caller = tx_info.account_contract_address
+    #assert caller = tx_info.account_contract_address
     assert_not_zero(tx_info.signature_len)
 
     let (pub) = public.read()

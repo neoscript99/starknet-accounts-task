@@ -6,7 +6,7 @@ import json
 sys.path.append('./')
 
 from console import blue_strong, blue, red
-from utils import deploy_account, print_n_wait, get_evaluator, fund_account, get_client
+from utils import deploy_account, print_n_wait, get_evaluator, fund_account, get_account_client
 from starkware.starknet.public.abi import get_selector_from_name
 from starkware.crypto.signature.signature import sign
 from starkware.crypto.signature.fast_pedersen_hash import pedersen_hash
@@ -33,7 +33,8 @@ async def main():
     blue.print(f"First account abstraction EIP: \n\thttps://eips.ethereum.org/EIPS/eip-{INPUT_1}")
     blue.print(f"Second account abstraction EIP: \n\thttps://eips.ethereum.org/EIPS/eip-{INPUT_2}\n")
 
-    client = get_client()
+    #client = get_client()
+    client, _ = get_account_client()
 
     sig1, sig1_addr = await deploy_account(client, data['SIGNATURE_1'])
 
@@ -54,7 +55,7 @@ async def main():
         calldata_len=3,
         calldata=[INPUT_1, INPUT_2, reward_account])
     
-    invocation = await prepared.invoke(signature=signature, max_fee=data['MAX_FEE'])
+    invocation = await prepared.invoke(max_fee=data['MAX_FEE'])
 
     await print_n_wait(client, invocation)
 

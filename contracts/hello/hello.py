@@ -5,7 +5,7 @@ import json
 sys.path.append('./')
 
 from console import blue_strong, blue, red
-from utils import deploy_account, print_n_wait, get_evaluator, fund_account, get_client
+from utils import deploy_account, print_n_wait, get_evaluator, fund_account, get_client, get_account_client
 from starkware.starknet.public.abi import get_selector_from_name
 
 with open("./hints.json", "r") as f:
@@ -21,11 +21,12 @@ async def main():
     # Initialize StarkNet Client
     #
     client = get_client()
+    acc_client, addr = get_account_client()
 
     #
     # Compile and Deploy `hello.cairo`
     #
-    hello, hello_addr = await deploy_account(client=client, contract_path=data['HELLO'])
+    hello, hello_addr = await deploy_account(client=acc_client, contract_path=data['HELLO'])
 
     #
     # Transfer ETH to pay for fees
@@ -48,6 +49,6 @@ async def main():
         calldata=[random, reward_account])
     invocation = await prepared.invoke(max_fee=data['MAX_FEE'])
 
-    await print_n_wait(client, invocation)
+    await print_n_wait(acc_client, invocation)
 
 asyncio.run(main())

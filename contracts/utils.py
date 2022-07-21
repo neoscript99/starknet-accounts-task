@@ -77,7 +77,9 @@ async def deploy_account(client, contract_path="", constructor_args=[], addition
             if CONTRACT_ADDRESS in cache_data[client.net]:
                 cyan.print(f"Found local contract: {cache_data[client.net][CONTRACT_ADDRESS]}\n")
                 
-                cached = await Contract.from_address(int(cache_data[client.net][CONTRACT_ADDRESS], 16), client, True)
+                # starknet.py - AccountClient has bug if 3th arg proxy_config = True, "TypeError: get_storage_at() missing 1 required positional argument: 'block_hash'"
+                # cached = await Contract.from_address(int(cache_data[client.net][CONTRACT_ADDRESS], 16), client, True)
+                cached = await Contract.from_address(int(cache_data[client.net][CONTRACT_ADDRESS], 16), client)
                 return cached, int(cache_data[client.net][CONTRACT_ADDRESS], 16)
 
     os.system("starknet-compile --account_contract {}.cairo --output {}_compiled.json".format(contract_path, contract_path, contract_path))
@@ -100,16 +102,16 @@ async def deploy_account(client, contract_path="", constructor_args=[], addition
 
     await client.wait_for_tx(deployment_result.hash)
     res = await client.get_transaction(deployment_result.hash)
-
+    yellow.print(res)
     if os.getenv('ACCOUNT_CACHE') != "false":
-        cache_data[client.net][CONTRACT_ADDRESS] = "0x{:02x}".format(res.transaction.contract_address)
+        cache_data[client.net][CONTRACT_ADDRESS] = "0x{:02x}".format(res.contract_address)
         with open(ACCOUNT_FILE, 'w') as outfile:
             json.dump(cache_data, outfile, sort_keys=True, indent=4)
         cyan.print("\tSuccess - cached in accounts.json")
 
     print("\u001b[0m\n")
 
-    return deployment_result.deployed_contract, res.transaction.contract_address
+    return deployment_result.deployed_contract, res.contract_address
 
 async def contract_cache_check(client, contract):
     with open(ACCOUNT_FILE) as outfile:
@@ -117,7 +119,7 @@ async def contract_cache_check(client, contract):
 
     if contract in acc_data[client.net]:
         cached_addr = int(acc_data[client.net][contract], 16)
-        cached = await Contract.from_address(cached_addr, client, True)
+        cached = await Contract.from_address(cached_addr, client)
         return True, cached, cached_addr
 
     return False, "", ""
@@ -201,9 +203,9 @@ def get_client():
     args = parser.parse_args()
 
     if args.testnet:
-        return Client("testnet")
+        return GatewayClient(net="testnet",chain=StarknetChainId.TESTNET)
     else:
-        return Client(net=data['DEVNET_URL'], chain="testnet")
+        return GatewayClient(net=data['DEVNET_URL'], chain=StarknetChainId.TESTNET)
 
 def get_account_client():
     parser = argparse.ArgumentParser()
@@ -212,8 +214,7 @@ def get_account_client():
 
     if args.testnet:
         addr = data['TESTNET_ACCOUNT']['ADDRESS']
-        client = GatewayClient(net="testnet",
-            chain=StarknetChainId.TESTNET)
+        client = GatewayClient(net="testnet", chain=StarknetChainId.TESTNET)
         acc_client = AccountClient(
             address=addr,
             key_pair=KeyPair(data['TESTNET_ACCOUNT']['PRIVATE'], data['TESTNET_ACCOUNT']['PUBLIC']),
@@ -223,8 +224,7 @@ def get_account_client():
 
     else:
         addr = data['DEVNET_ACCOUNT']['ADDRESS']
-        client = GatewayClient(net=data['DEVNET_URL'],
-            chain=StarknetChainId.TESTNET)
+        client = GatewayClient(net=data['DEVNET_URL'], chain=StarknetChainId.TESTNET)
         acc_client = AccountClient(
             address=addr,
             key_pair=KeyPair(data['DEVNET_ACCOUNT']['PRIVATE'], data['DEVNET_ACCOUNT']['PUBLIC']),
